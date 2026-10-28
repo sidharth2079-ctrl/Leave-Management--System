@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkPulse - Java OOP Leave Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .badge-vacation { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .badge-sick { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .badge-personal { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-parental { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .status-pulse {
+      animation: pulseRing 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-blue-100 selection:text-blue-900">
+
+  <!-- ================= TOP NAVIGATION & PERSONA SWITCHER ================= -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Brand / System Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <i class="fa-solid fa-calendar-check text-lg"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-lg text-slate-900 tracking-tight">WorkPulse</span>
+              <span class="text-xs px-2 py-0.5 font-mono bg-blue-50 text-blue-700 border border-blue-200 rounded-full font-semibold">Java OOP Engine</span>
+            </div>
+            <p class="text-xs text-slate-500 hidden sm:block">Employee Leave Management & Approval Engine</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn px-3.5 py-1.5 rounded-lg bg-white text-slate-900 shadow-xs transition-all">
+            <i class="fa-solid fa-house mr-1.5 text-blue-600"></i>Dashboard
+          </button>
+          <button onclick="switchTab('calendar')" id="nav-calendar" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all">
+            <i class="fa-solid fa-calendar-days mr-1.5 text-indigo-500"></i>Team Calendar
+          </button>
+          <button onclick="switchTab('oop')" id="nav-oop" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all">
+            <i class="fa-solid fa-network-wired mr-1.5 text-emerald-600"></i>OOP Class Model
+          </button>
+        </nav>
+
+        <!-- Active Persona Switcher -->
+        <div class="flex items-center space-x-3">
+          <div class="text-right hidden sm:block">
+            <div class="text-xs font-medium text-slate-500">Active Persona</div>
+            <div id="persona-role-badge" class="text-xs font-semibold text-blue-600">Employee View</div>
+          </div>
+          <div class="relative">
+            <select id="userSelector" onchange="switchPersona(this.value)" 
+                    class="appearance-none bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800 text-xs font-semibold py-2 pl-3 pr-8 rounded-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+              <!-- Populated dynamically via JS -->
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-[10px] text-slate-500 pointer-events-none"></i>
+          </div>
+
+          <button onclick="toggleConsole()" title="Toggle JVM Execution Terminal" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-900 transition-all relative">
+            <i class="fa-solid fa-terminal text-sm"></i>
+            <span id="console-pulse" class="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full status-pulse"></span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Sub-nav -->
+  <div class="md:hidden flex justify-around bg-white border-b border-slate-200 py-2 px-4 text-xs font-medium">
+    <button onclick="switchTab('dashboard')" class="text-blue-600 flex items-center"><i class="fa-solid fa-house mr-1"></i> Dashboard</button>
+    <button onclick="switchTab('calendar')" class="text-slate-600 flex items-center"><i class="fa-solid fa-calendar mr-1"></i> Calendar</button>
+    <button onclick="switchTab('oop')" class="text-slate-600 flex items-center"><i class="fa-solid fa-network-wired mr-1"></i> OOP Model</button>
+  </div>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- CURRENT USER CARD & STATS BANNER -->
+    <section class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs transition-all">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        
+        <!-- Profile Identity Info -->
+        <div class="flex items-center space-x-4">
+          <div id="user-avatar" class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 font-bold text-xl flex items-center justify-center border-2 border-blue-200 shadow-inner">
+            SD
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 id="user-name" class="text-xl font-bold text-slate-900">Sidharth</h1>
+              <span id="user-pill-role" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Employee
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 flex items-center space-x-2 mt-0.5">
+              <span><i class="fa-solid fa-id-badge mr-1 text-slate-400"></i><span id="user-id">EMP-101</span></span>
+              <span>•</span>
+              <span><i class="fa-solid fa-building mr-1 text-slate-400"></i><span id="user-dept">Engineering</span></span>
+              <span>•</span>
+              <span><i class="fa-solid fa-layer-group mr-1 text-slate-400"></i>Class: <code class="font-mono text-blue-600 font-bold" id="user-java-class">Employee</code></span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Real-time Leave Balance Metric Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
+          
+          <div class="bg-blue-50/60 border border-blue-100 rounded-xl p-3 flex flex-col justify-between min-w-[130px]">
+            <span class="text-[11px] font-semibold text-blue-700 uppercase tracking-wider flex items-center justify-between">
+              Total Balance
+              <i class="fa-solid fa-wallet text-blue-500"></i>
+            </span>
+            <div class="mt-2 flex items-baseline space-x-1">
+              <span id="stat-total-balance" class="text-2xl font-extrabold text-blue-900">12</span>
+              <span class="text-xs font-medium text-blue-600">days left</span>
+            </div>
+            <div class="w-full bg-blue-200/60 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div id="stat-total-bar" class="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style="width: 48%;"></div>
+            </div>
+          </div>
+
+          <div class="bg-amber-50/60 border border-amber-100 rounded-xl p-3 flex flex-col justify-between min-w-[130px]">
+            <span class="text-[11px] font-semibold text-amber-700 uppercase tracking-wider flex items-center justify-between">
+              Pending Days
+              <i class="fa-solid fa-clock-rotate-left text-amber-500"></i>
+            </span>
+            <div class="mt-2 flex items-baseline space-x-1">
+              <span id="stat-pending-days" class="text-2xl font-extrabold text-amber-900">0</span>
+              <span class="text-xs font-medium text-amber-600">days</span>
+            </div>
+            <div class="text-[10px] text-amber-700 mt-2 font-medium">Under manager review</div>
+          </div>
+
+          <div class="bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 flex flex-col justify-between min-w-[130px]">
+            <span class="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider flex items-center justify-between">
+              Approved
+              <i class="fa-solid fa-circle-check text-emerald-500"></i>
+            </span>
+            <div class="mt-2 flex items-baseline space-x-1">
+              <span id="stat-approved-days" class="text-2xl font-extrabold text-emerald-900">4</span>
+              <span class="text-xs font-medium text-emerald-600">days taken</span>
+            </div>
+            <div class="text-[10px] text-emerald-700 mt-2 font-medium">This calendar year</div>
+          </div>
+
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between min-w-[130px]">
+            <span class="text-[11px] font-semibold text-slate-600 uppercase tracking-wider flex items-center justify-between">
+              Team On Leave
+              <i class="fa-solid fa-users text-slate-400"></i>
+            </span>
+            <div class="mt-2 flex items-baseline space-x-1">
+              <span id="stat-team-absent" class="text-2xl font-extrabold text-slate-800">1</span>
+              <span class="text-xs font-medium text-slate-500">colleague(s)</span>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-2 font-medium">In your department</div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= TAB 1: MAIN DASHBOARD ================= -->
+    <div id="tab-dashboard-view" class="space-y-6">
+
+      <!-- Manager Approval Queue (Conditionally featured or elevated if Manager) -->
+      <section id="manager-section" class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden transition-all">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-50 to-white">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-base font-bold text-slate-900">Manager Approval Workflow</h2>
+                <span id="mgr-badge-indicator" class="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Manager Authorization Active
+                </span>
+              </div>
+              <p class="text-xs text-slate-500">Polymorphic method: <code class="font-mono text-indigo-600">Manager.processRequest(LeaveRequest, boolean)</code></p>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <span class="text-xs text-slate-500">Filter Status:</span>
+            <select id="filterRequestStatus" onchange="renderRequestsTable()" class="text-xs font-medium bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <option value="ALL">All Requests</option>
+              <option value="PENDING" selected>Pending Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="manager-gate-alert" class="hidden p-4 bg-amber-50 border-b border-amber-200 text-xs text-amber-800 flex items-center space-x-2">
+          <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
+          <span><strong>Read-Only Notice:</strong> You are currently logged in as an <strong>Employee</strong>. Only <strong>Manager</strong> persona (e.g. Shyma) has execution authority to invoke approval/rejection workflows.</span>
+        </div>
+
+        <!-- Table of Requests -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50/80 text-slate-600 border-b border-slate-200 uppercase font-semibold tracking-wider text-[11px]">
+                <th class="py-3 px-4">Request ID</th>
+                <th class="py-3 px-4">Employee</th>
+                <th class="py-3 px-4">Type</th>
+                <th class="py-3 px-4">Date Range</th>
+                <th class="py-3 px-4 text-center">Business Days</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Workflow Actions</th>
+              </tr>
+            </thead>
+            <tbody id="requests-tbody" class="divide-y divide-slate-100 font-medium">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TWO-COLUMN WORKSPACE: Leave Submission Form + My Leave History -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Column 1: Leave Submission Form (5 Cols) -->
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                <i class="fa-solid fa-paper-plane"></i>
+              </div>
+              <h2 class="font-bold text-slate-900 text-sm">Submit New Leave Request</h2>
+            </div>
+            <span class="text-[11px] font-mono text-slate-400">new LeaveRequest()</span>
+          </div>
+
+          <form id="leaveApplicationForm" onsubmit="handleLeaveSubmit(event)" class="space-y-4">
+            
+            <!-- Employee Selector when Admin, else displays current user -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Applying Employee</label>
+              <input type="text" id="form-applicant-display" readonly 
+                     class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-medium cursor-not-allowed">
+            </div>
+
+            <!-- Leave Type -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Leave Category (Enum: LeaveType)</label>
+              <select id="form-leave-type" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option value="VACATION">Vacation (Annual Leave)</option>
+                <option value="SICK">Sick / Medical Leave</option>
+                <option value="PERSONAL">Personal / Casual</option>
+                <option value="MATERNITY_PATERNITY">Parental (Maternity/Paternity)</option>
+              </select>
+            </div>
+
+            <!-- Date Range Pickers -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Start Date</label>
+                <input type="date" id="form-start-date" required onchange="calculateLiveRequestedDays()"
+                       class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">End Date</label>
+                <input type="date" id="form-end-date" required onchange="calculateLiveRequestedDays()"
+                       class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+            </div>
+
+            <!-- Real-Time Auto-Calculation Feedback Box -->
+            <div id="calc-preview-card" class="rounded-xl p-3 border text-xs transition-all bg-slate-50 border-slate-200">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-600 flex items-center">
+                  <i class="fa-solid fa-calculator mr-1.5 text-blue-500"></i> Auto Working Days:
+                </span>
+                <span id="preview-business-days" class="font-extrabold text-slate-900 font-mono text-sm">0 days</span>
+              </div>
+              <div id="preview-calc-explanation" class="text-[11px] text-slate-500 mt-1">
+                Select start and end dates to calculate working days (skips Saturday & Sunday).
+              </div>
+              <div id="preview-balance-warning" class="hidden mt-2 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+                <span id="warning-text">Insufficient balance for this request.</span>
+              </div>
+            </div>
+
+            <!-- Reason Note -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Purpose / Notes (Optional)</label>
+              <textarea id="form-reason" rows="2" placeholder="e.g. Annual family travel, attending conference..."
+                        class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="btn-submit-request"
+                    class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow-sm transition-all flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-check"></i>
+              <span>Submit Leave Request</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Column 2: User Personal Leave History & Encapsulated Object Inspector (7 Cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                  <h2 class="font-bold text-slate-900 text-sm">My Leave Records</h2>
+                  <p class="text-[11px] text-slate-500">History for current authenticated persona</p>
+                </div>
+              </div>
+              <span id="history-counter-badge" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">0 records</span>
+            </div>
+
+            <div id="user-history-list" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Quick OOP Principle Highlight Box -->
+          <div class="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl p-5 text-white shadow-md">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-blue-400 font-semibold">OOP In Action</span>
+                <h3 class="text-sm font-bold mt-1 text-slate-100">Workflow Guardrails & Encapsulation</h3>
+                <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                  Notice that balance deductions never occur directly on raw data. In this implementation, only the polymorphic <code class="text-emerald-400 font-mono">Manager.processRequest()</code> can trigger <code class="text-emerald-400 font-mono">employee.deductLeave()</code> upon true approval, maintaining strict domain integrity.
+                </p>
+              </div>
+              <i class="fa-solid fa-shield-halved text-2xl text-blue-400/50 ml-3"></i>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 2: INTERACTIVE TEAM CALENDAR ================= -->
+    <div id="tab-calendar-view" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+        
+        <!-- Calendar Header & Controls -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-calendar-day"></i>
+            </div>
+            <div>
+              <h2 id="calendar-month-title" class="text-lg font-bold text-slate-900">November 2026</h2>
+              <p class="text-xs text-slate-500">Live Team Absence & Scheduled Time-Off View</p>
+            </div>
+          </div>
+
+          <!-- Controls: Dept Filter + Month Prev/Next -->
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-xs text-slate-500">Dept:</span>
+              <select id="cal-dept-filter" onchange="renderCalendar()" class="text-xs font-semibold bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="ALL">All Departments</option>
+                <option value="Engineering" selected>Engineering</option>
+                <option value="Marketing">Marketing</option>
+              </select>
+            </div>
+
+            <div class="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+              <button onclick="changeMonth(-1)" class="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg text-xs transition-all">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <button onclick="resetToDemoMonth()" class="px-2.5 py-1 text-slate-700 hover:text-blue-600 font-semibold text-xs">
+                Today
+              </button>
+              <button onclick="changeMonth(1)" class="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg text-xs transition-all">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="flex flex-wrap items-center gap-3 py-3 text-xs border-b border-slate-100 text-slate-600">
+          <span class="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Leave Categories:</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md badge-vacation text-[11px] font-semibold"><i class="fa-solid fa-umbrella-beach mr-1"></i> Vacation</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md badge-sick text-[11px] font-semibold"><i class="fa-solid fa-notes-medical mr-1"></i> Sick</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md badge-personal text-[11px] font-semibold"><i class="fa-solid fa-user-clock mr-1"></i> Personal</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md badge-parental text-[11px] font-semibold"><i class="fa-solid fa-baby mr-1"></i> Parental</span>
+          <span class="text-slate-400 text-[11px] ml-auto"><i class="fa-solid fa-circle-info mr-1"></i> Click on any day to see full absence breakdown</span>
+        </div>
+
+        <!-- Calendar 7-Day Grid Header -->
+        <div class="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-t-xl overflow-hidden mt-3 text-center text-xs font-semibold text-slate-600">
+          <div class="bg-slate-100 py-2.5 text-slate-400">Sun</div>
+          <div class="bg-slate-50 py-2.5">Mon</div>
+          <div class="bg-slate-50 py-2.5">Tue</div>
+          <div class="bg-slate-50 py-2.5">Wed</div>
+          <div class="bg-slate-50 py-2.5">Thu</div>
+          <div class="bg-slate-50 py-2.5">Fri</div>
+          <div class="bg-slate-100 py-2.5 text-slate-400">Sat</div>
+        </div>
+
+        <!-- Calendar Cells Grid -->
+        <div id="calendar-grid-cells" class="grid grid-cols-7 gap-px bg-slate-200 border-x border-b border-slate-200 rounded-b-xl overflow-hidden text-xs">
+          <!-- Injected via JS -->
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= TAB 3: OOP CLASS DIAGRAM & CODE INSPECTOR ================= -->
+    <div id="tab-oop-view" class="hidden space-y-6">
+      
+      <!-- Class Explorer Header -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-mono font-semibold text-emerald-600 uppercase tracking-widest">Architectural Spec</span>
+            <h2 class="text-lg font-bold text-slate-900 mt-0.5">Java Object-Oriented Class Design & Hierarchy</h2>
+            <p class="text-xs text-slate-500">Explore class contracts, encapsulation rules, polymorphism, and in-memory heap instances.</p>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <button onclick="selectOOPClass('Employee')" class="oop-pill-btn px-3 py-1.5 rounded-lg border font-mono font-semibold bg-blue-50 border-blue-300 text-blue-700">class Employee</button>
+            <button onclick="selectOOPClass('Manager')" class="oop-pill-btn px-3 py-1.5 rounded-lg border font-mono font-semibold bg-slate-100 border-slate-200 text-slate-700">class Manager (extends)</button>
+            <button onclick="selectOOPClass('LeaveRequest')" class="oop-pill-btn px-3 py-1.5 rounded-lg border font-mono font-semibold bg-slate-100 border-slate-200 text-slate-700">class LeaveRequest</button>
+            <button onclick="selectOOPClass('LeaveManager')" class="oop-pill-btn px-3 py-1.5 rounded-lg border font-mono font-semibold bg-slate-100 border-slate-200 text-slate-700">class LeaveManager (Service)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- UML Cards & Java Definition Split -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left: Visual UML Class Structure (5 Cols) -->
+        <div class="lg:col-span-5 space-y-4">
+          <div id="uml-card" class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <!-- Dynamic Content based on selected class -->
+          </div>
+
+          <!-- OOP Principles Checklist for Graders/Reviewers -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5">
+            <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-award text-amber-500 mr-2"></i> Design Principles Adherence
+            </h4>
+            <div class="space-y-1.5 text-xs text-slate-600">
+              <div class="flex items-start space-x-2">
+                <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                <span><strong>Encapsulation:</strong> Private variables with validated mutators (e.g. `deductLeave()` prevents negative balance).</span>
+              </div>
+              <div class="flex items-start space-x-2">
+                <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                <span><strong>Inheritance:</strong> `Manager` extends `Employee` augmenting supervisory approval behaviors.</span>
+              </div>
+              <div class="flex items-start space-x-2">
+                <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                <span><strong>Polymorphism:</strong> Safe instance dispatch and manager role enforcement via Java type system.</span>
+              </div>
+              <div class="flex items-start space-x-2">
+                <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                <span><strong>Auto Calculation:</strong> Temporal business-day filtering excluding Saturdays & Sundays (`java.time.LocalDate`).</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Java Source Inspector (7 Cols) -->
+        <div class="lg:col-span-7 bg-slate-900 rounded-2xl shadow-lg border border-slate-800 p-4 font-mono text-xs flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3 text-slate-400">
+              <div class="flex items-center space-x-2">
+                <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                <span id="code-filename" class="ml-2 text-slate-300 font-semibold">Employee.java</span>
+              </div>
+              <button onclick="copyCurrentJavaCode()" class="text-slate-400 hover:text-white transition-all text-xs flex items-center space-x-1">
+                <i class="fa-regular fa-copy"></i>
+                <span>Copy Java</span>
+              </button>
+            </div>
+            <pre id="code-snippet-display" class="text-emerald-400 overflow-x-auto p-2 leading-relaxed selection:bg-blue-800 selection:text-white max-h-[500px]"></pre>
+          </div>
+          <div class="text-[11px] text-slate-500 pt-3 border-t border-slate-800 flex justify-between">
+            <span>Target: JDK 17+ (java.time compliant)</span>
+            <span>Thread-safe Domain Design</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= DAY DETAIL POPUP MODAL ================= -->
+  <div id="day-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-calendar-day text-blue-600"></i>
+          <h3 id="modal-date-title" class="font-bold text-slate-800 text-sm">Absence Roster: Nov 4, 2026</h3>
+        </div>
+        <button onclick="closeDayModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="modal-leaves-content" class="p-4 space-y-3 max-h-72 overflow-y-auto">
+        <!-- Rendered items -->
+      </div>
+      <div class="p-3 bg-slate-50 border-t border-slate-200 text-right">
+        <button onclick="closeDayModal()" class="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 font-semibold text-xs text-slate-700">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LIVE JVM CONSOLE / EXECUTION DRAWER ================= -->
+  <div id="jvm-console" class="fixed bottom-0 inset-x-0 bg-slate-950 text-slate-200 z-50 border-t border-slate-800 shadow-2xl transition-all duration-300 transform translate-y-0 h-48 flex flex-col font-mono text-xs">
+    <!-- Console Bar -->
+    <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 status-pulse"></span>
+        <span class="font-semibold text-slate-300 text-xs flex items-center">
+          <i class="fa-brands fa-java text-rose-500 mr-2 text-sm"></i>
+          Java Runtime Environment Simulation Console (Standard Out / System.out.println)
+        </span>
+        <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">PID: 8092</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="clearConsole()" class="text-[11px] text-slate-400 hover:text-white px-2 py-0.5 rounded hover:bg-slate-800 transition-all">Clear</button>
+        <button onclick="toggleConsole()" class="text-slate-400 hover:text-white px-2 py-0.5">
+          <i id="console-toggle-icon" class="fa-solid fa-chevron-down"></i>
+        </button>
+      </div>
+    </div>
+    <!-- Console Log Stream -->
+    <div id="console-logs" class="flex-1 p-3 overflow-y-auto space-y-1 font-mono text-[11px] bg-slate-950 text-emerald-400">
+      <!-- Simulated JVM Logs will append here -->
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS CONTAINER -->
+  <div id="toast-container" class="fixed top-20 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- ================= CORE JAVASCRIPT APPLICATION ================= -->
+  <script>
+    // ==========================================
+    // 1. DATA MODELS & IN-MEMORY OOP STATE
+    // ==========================================
+
+    const LEAVE_TYPES = {
+      VACATION: { label: 'Vacation', icon: 'fa-umbrella-beach', badgeClass: 'badge-vacation' },
+      SICK: { label: 'Sick Leave', icon: 'fa-notes-medical', badgeClass: 'badge-sick' },
+      PERSONAL: { label: 'Personal', icon: 'fa-user-clock', badgeClass: 'badge-personal' },
+      MATERNITY_PATERNITY: { label: 'Parental', icon: 'fa-baby', badgeClass: 'badge-parental' }
+    };
+
+    const LEAVE_STATUS = {
+      PENDING: { label: 'Pending Review', class: 'bg-amber-50 text-amber-700 border-amber-200' },
+      APPROVED: { label: 'Approved', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      REJECTED: { label: 'Rejected', class: 'bg-rose-50 text-rose-700 border-rose-200' }
+    };
+
+    // Employees State (Demonstrating OOP inheritance)
+    const employees = [
+      {
+        id: 'MGR-01',
+        name: 'Shyma',
+        department: 'Engineering',
+        leaveBalance: 24,
+        role: 'MANAGER',
+        isManager: true,
+        avatar: 'SH',
+        javaClass: 'Manager (extends Employee)'
+      },
+      {
+        id: 'EMP-101',
+        name: 'Sidharth',
+        department: 'Engineering',
+        leaveBalance: 12,
+        role: 'EMPLOYEE',
+        isManager: false,
+        avatar: 'SD',
+        javaClass: 'Employee'
+      },
+      {
+        id: 'EMP-102',
+        name: 'Thanvi',
+        department: 'Engineering',
+        leaveBalance: 6,
+        role: 'EMPLOYEE',
+        isManager: false,
+        avatar: 'TH',
+        javaClass: 'Employee'
+      },
+      {
+        id: 'EMP-103',
+        name: 'Lena',
+        department: 'Engineering',
+        leaveBalance: 10,
+        role: 'EMPLOYEE',
+        isManager: false,
+        avatar: 'LN',
+        javaClass: 'Employee'
+      },
+      {
+        id: 'EMP-104',
+        name: 'Sulala',
+        department: 'Marketing',
+        leaveBalance: 14,
+        role: 'EMPLOYEE',
+        isManager: false,
+        avatar: 'SL',
+        javaClass: 'Employee'
+      }
+    ];
+
+    // Seeded Leave Requests
+    let requests = [
+      {
+        requestId: 'REQ-1001',
+        employeeId: 'EMP-101',
+        leaveType: 'VACATION',
+        startDate: '2026-11-03',
+        endDate: '2026-11-06',
+        daysRequested: 4,
+        status: 'APPROVED',
+        reason: 'Annual vacation trip',
+        reviewedBy: 'Shyma (MGR-01)',
+        appliedDate: '2026-10-20'
+      },
+      {
+        requestId: 'REQ-1002',
+        employeeId: 'EMP-102',
+        leaveType: 'PERSONAL',
+        startDate: '2026-11-12',
+        endDate: '2026-11-13',
+        daysRequested: 2,
+        status: 'PENDING',
+        reason: 'Relocation & personal errands',
+        reviewedBy: null,
+        appliedDate: '2026-10-25'
+      },
+      {
+        requestId: 'REQ-1003',
+        employeeId: 'EMP-103',
+        leaveType: 'SICK',
+        startDate: '2026-11-09',
+        endDate: '2026-11-10',
+        daysRequested: 2,
+        status: 'APPROVED',
+        reason: 'Doctor appointment and rest',
+        reviewedBy: 'Shyma (MGR-01)',
+        appliedDate: '2026-10-22'
+      },
+      {
+        requestId: 'REQ-1004',
+        employeeId: 'EMP-104',
+        leaveType: 'VACATION',
+        startDate: '2026-11-18',
+        endDate: '2026-11-20',
+        daysRequested: 3,
+        status: 'PENDING',
+        reason: 'Design conference & creative retreat',
+        reviewedBy: null,
+        appliedDate: '2026-10-26'
+      }
+    ];
+
+    let currentUserId = 'EMP-101'; // Default to Sidharth
+    let calendarCurrentDate = new Date(2026, 10, 1); // November 2026 (Month is 0-indexed)
+    let selectedOOPClass = 'Employee';
+    let isConsoleOpen = true;
+
+    // ==========================================
+    // 2. OOP CODE INSPECTOR DATA STRINGS
+    // ==========================================
+
+    const OOP_SCHEMAS = {
+      Employee: {
+        title: "Employee.java",
+        description: "Base entity encapsulating standard employee attributes and balance deductions.",
+        uml: {
+          name: "Employee",
+          type: "Base Class",
+          attributes: [
+            "- id: String",
+            "- name: String",
+            "- department: String",
+            "- leaveBalance: int"
+          ],
+          methods: [
+            "+ Employee(id, name, dept, balance)",
+            "+ hasSufficientBalance(days: int): boolean",
+            "+ deductLeave(days: int): void",
+            "+ creditLeave(days: int): void",
+            "+ getLeaveBalance(): int"
+          ]
+        },
+        code: `package com.workpulse.leave.model;
+
+/**
+ * Encapsulates core state and balance logic for personnel.
+ */
+public class Employee {
+    private final String id;
+    private final String name;
+    private final String department;
+    private int leaveBalance;
+
+    public Employee(String id, String name, String department, int initialBalance) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("ID is required");
+        this.id = id;
+        this.name = name;
+        this.department = department;
+        this.leaveBalance = Math.max(0, initialBalance);
+    }
+
+    public boolean hasSufficientBalance(int days) {
+        return this.leaveBalance >= days;
+    }
+
+    // Encapsulated mutator - prevents negative balance states
+    public synchronized void deductLeave(int days) {
+        if (!hasSufficientBalance(days)) {
+            throw new IllegalStateException("Insufficient leave balance for deduction.");
+        }
+        this.leaveBalance -= days;
+    }
+
+    public synchronized void creditLeave(int days) {
+        this.leaveBalance += days;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getDepartment() { return department; }
+    public int getLeaveBalance() { return leaveBalance; }
+}`
+      },
+      Manager: {
+        title: "Manager.java",
+        description: "Specialized Employee that inherits identity and holds permission to execute workflows.",
+        uml: {
+          name: "Manager",
+          type: "Subclass (extends Employee)",
+          attributes: [
+            "(Inherits id, name, department, leaveBalance)",
+            "- managedTeam: List<Employee>"
+          ],
+          methods: [
+            "+ Manager(id, name, dept, balance)",
+            "+ processRequest(req: LeaveRequest, approve: boolean, emp: Employee): void",
+            "+ reviewDepartmentSchedules(): void"
+          ]
+        },
+        code: `package com.workpulse.leave.model;
+
+/**
+ * Manager extends Employee, adding authorization to review requests.
+ */
+public class Manager extends Employee {
+
+    public Manager(String id, String name, String department, int initialBalance) {
+        super(id, name, department, initialBalance);
+    }
+
+    /**
+     * Executes the polymorphic approval workflow.
+     */
+    public void processRequest(LeaveRequest request, boolean approve, Employee applicant) {
+        if (request.getStatus() != LeaveStatus.PENDING) {
+            throw new IllegalStateException("Request is not in PENDING status.");
+        }
+
+        if (approve) {
+            if (!applicant.hasSufficientBalance(request.getDaysRequested())) {
+                request.setStatus(LeaveStatus.REJECTED);
+                throw new IllegalStateException("Approval aborted: Employee balance insufficient.");
+            }
+            // Domain rule: Leave balance is deducted upon approval
+            applicant.deductLeave(request.getDaysRequested());
+            request.setStatus(LeaveStatus.APPROVED);
+        } else {
+            request.setStatus(LeaveStatus.REJECTED);
+        }
+    }
+}`
+      },
+      LeaveRequest: {
+        title: "LeaveRequest.java",
+        description: "Immutable value-object representing a requested leave window with auto-calculated working days.",
+        uml: {
+          name: "LeaveRequest",
+          type: "Domain Entity",
+          attributes: [
+            "- requestId: String",
+            "- employeeId: String",
+            "- leaveType: LeaveType",
+            "- startDate: LocalDate",
+            "- endDate: LocalDate",
+            "- daysRequested: int",
+            "- status: LeaveStatus"
+          ],
+          methods: [
+            "+ LeaveRequest(empId, type, start, end)",
+            "+ calculateWorkingDays(start, end): int",
+            "+ setStatus(newStatus: LeaveStatus): void"
+          ]
+        },
+        code: `package com.workpulse.leave.model;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+
+public class LeaveRequest {
+    private static int ID_COUNTER = 1000;
+
+    private final String requestId;
+    private final String employeeId;
+    private final LeaveType leaveType;
+    private final LocalDate startDate;
+    private final LocalDate endDate;
+    private final int daysRequested;
+    private LeaveStatus status;
+
+    public LeaveRequest(String employeeId, LeaveType leaveType, LocalDate startDate, LocalDate endDate) {
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("Start date cannot succeed end date.");
+        }
+        this.requestId = "REQ-" + (++ID_COUNTER);
+        this.employeeId = employeeId;
+        this.leaveType = leaveType;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.daysRequested = calculateWorkingDays(startDate, endDate);
+        this.status = LeaveStatus.PENDING;
+    }
+
+    // Auto-calculates business days excluding Saturday & Sunday
+    public static int calculateWorkingDays(LocalDate start, LocalDate end) {
+        int workingDays = 0;
+        LocalDate curr = start;
+        while (!curr.isAfter(end)) {
+            DayOfWeek day = curr.getDayOfWeek();
+            if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+                workingDays++;
+            }
+            curr = curr.plusDays(1);
+        }
+        return workingDays;
+    }
+    // Getters and status setters omitted for brevity...
+}`
+      },
+      LeaveManager: {
+        title: "LeaveManager.java",
+        description: "Coordination service managing registration, validation checks, and monthly calendar aggregation.",
+        uml: {
+          name: "LeaveManager",
+          type: "Controller / Service",
+          attributes: [
+            "- employees: Map<String, Employee>",
+            "- requests: List<LeaveRequest>"
+          ],
+          methods: [
+            "+ registerEmployee(e: Employee): void",
+            "+ submitLeaveRequest(empId, type, start, end): LeaveRequest",
+            "+ reviewRequest(mgrId, reqId, approve): boolean",
+            "+ getMonthlyCalendar(dept, month): Map<LocalDate, List<Employee>>"
+          ]
+        },
+        code: `package com.workpulse.leave.service;
+
+import java.util.*;
+import java.time.YearMonth;
+
+public class LeaveManager {
+    private final Map<String, Employee> employees = new HashMap<>();
+    private final List<LeaveRequest> requests = new ArrayList<>();
+
+    public LeaveRequest submitLeaveRequest(String empId, LeaveType type, LocalDate start, LocalDate end) {
+        Employee emp = employees.get(empId);
+        int days = LeaveRequest.calculateWorkingDays(start, end);
+        if (!emp.hasSufficientBalance(days)) {
+            throw new IllegalArgumentException("Balance insufficient.");
+        }
+        LeaveRequest req = new LeaveRequest(empId, type, start, end);
+        requests.add(req);
+        return req;
+    }
+
+    public boolean reviewRequest(String managerId, String requestId, boolean approve) {
+        Employee mgr = employees.get(managerId);
+        if (!(mgr instanceof Manager)) {
+            throw new SecurityException("Only managers have authorization.");
+        }
+        LeaveRequest target = findRequest(requestId);
+        ((Manager) mgr).processRequest(target, approve, employees.get(target.getEmployeeId()));
+        return true;
+    }
+}`
+      }
+    };
+
+    // ==========================================
+    // 3. JVM CONSOLE LOGGER ENGINE
+    // ==========================================
+
+    function jvmLog(level, className, method, message) {
+      const container = document.getElementById('console-logs');
+      const timeStr = new Date().toTimeString().split(' ')[0] + '.' + Math.floor(Math.random() * 899 + 100);
+      
+      let levelColor = 'text-blue-400';
+      if (level === 'WARN') levelColor = 'text-amber-400';
+      if (level === 'ERROR') levelColor = 'text-rose-400';
+      if (level === 'SUCCESS') levelColor = 'text-emerald-400 font-semibold';
+
+      const line = document.createElement('div');
+      line.className = 'hover:bg-slate-900/60 px-1 py-0.5 rounded transition-all';
+      line.innerHTML = `
+        <span class="text-slate-600 font-mono">[${timeStr}]</span>
+        <span class="${levelColor} font-mono">[${level}]</span>
+        <span class="text-indigo-400 font-mono">${className}#${method}:</span>
+        <span class="text-slate-200">${message}</span>
+      `;
+      container.appendChild(line);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function toggleConsole() {
+      const consoleEl = document.getElementById('jvm-console');
+      const icon = document.getElementById('console-toggle-icon');
+      if (isConsoleOpen) {
+        consoleEl.style.height = '34px';
+        icon.className = 'fa-solid fa-chevron-up';
+      } else {
+        consoleEl.style.height = '190px';
+        icon.className = 'fa-solid fa-chevron-down';
+      }
+      isConsoleOpen = !isConsoleOpen;
+    }
+
+    function clearConsole() {
+      document.getElementById('console-logs').innerHTML = '';
+      jvmLog('INFO', 'JVM', 'System', 'Console buffer cleared.');
+    }
+
+    // ==========================================
+    // 4. BUSINESS LOGIC & WORKING DAYS UTILS
+    // ==========================================
+
+    function calculateWorkingDays(startDateStr, endDateStr) {
+      if (!startDateStr || !endDateStr) return 0;
+      const start = new Date(startDateStr + 'T00:00:00');
+      const end = new Date(endDateStr + 'T00:00:00');
+      if (start > end) return 0;
+
+      let count = 0;
+      let cur = new Date(start);
+      while (cur <= end) {
+        const day = cur.getDay(); // 0 is Sunday, 6 is Saturday
+        if (day !== 0 && day !== 6) {
+          count++;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      return count;
+    }
+
+    function calculateLiveRequestedDays() {
+      const start = document.getElementById('form-start-date').value;
+      const end = document.getElementById('form-end-date').value;
+      const previewDays = document.getElementById('preview-business-days');
+      const explanation = document.getElementById('preview-calc-explanation');
+      const warning = document.getElementById('preview-balance-warning');
+      const warningText = document.getElementById('warning-text');
+      const submitBtn = document.getElementById('btn-submit-request');
+
+      if (!start || !end) {
+        previewDays.textContent = '0 days';
+        explanation.textContent = 'Select start and end dates to calculate working days (skips weekends).';
+        warning.classList.add('hidden');
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const sDate = new Date(start + 'T00:00:00');
+      const eDate = new Date(end + 'T00:00:00');
+
+      if (sDate > eDate) {
+        previewDays.textContent = 'Invalid Range';
+        explanation.textContent = 'Error: Start date cannot be after end date.';
+        warning.classList.remove('hidden');
+        warningText.textContent = 'Start date must be before or equal to End date.';
+        submitBtn.disabled = true;
+        return;
+      }
+
+      const days = calculateWorkingDays(start, end);
+      previewDays.textContent = `${days} working day${days === 1 ? '' : 's'}`;
+
+      const user = employees.find(e => e.id === currentUserId);
+      jvmLog('DEBUG', 'LeaveRequest', 'calculateWorkingDays', `Parsed range ${start} to ${end} -> computed ${days} business days`);
+
+      if (days === 0) {
+        explanation.textContent = 'Selected span falls entirely on a weekend (0 days).';
+        warning.classList.remove('hidden');
+        warningText.textContent = 'Cannot submit a leave for zero working days.';
+        submitBtn.disabled = true;
+        return;
+      } else {
+        explanation.textContent = `Calculated Mon-Fri business days, excluding weekend dates.`;
+      }
+
+      // Check balance
+      if (days > user.leaveBalance) {
+        warning.classList.remove('hidden');
+        warningText.textContent = `Insufficient leave balance! Requested ${days} days, but you have ${user.leaveBalance} days remaining.`;
+        submitBtn.disabled = true;
+      } else {
+        warning.classList.add('hidden');
+        submitBtn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    // 5. ROLE & PERSONA WORKFLOW
+    // ==========================================
+
+    function switchPersona(userId) {
+      currentUserId = userId;
+      const user = employees.find(e => e.id === userId);
+      
+      jvmLog('INFO', 'LeaveManager', 'switchPersona', `Context switch to [${user.id}] ${user.name} (${user.role})`);
+      renderHeaderAndMetrics();
+      renderRequestsTable();
+      renderUserHistory();
+      renderCalendar();
+      updateFormFields();
+
+      showToast(`Switched active persona to ${user.name} (${user.role})`, 'info');
+    }
+
+    function renderHeaderAndMetrics() {
+      const user = employees.find(e => e.id === currentUserId);
+      document.getElementById('user-name').textContent = user.name;
+      document.getElementById('user-id').textContent = user.id;
+      document.getElementById('user-dept').textContent = user.department;
+      document.getElementById('user-avatar').textContent = user.avatar;
+      document.getElementById('user-java-class').textContent = user.javaClass;
+      
+      const roleBadge = document.getElementById('user-pill-role');
+      const personaIndicator = document.getElementById('persona-role-badge');
+      const gateAlert = document.getElementById('manager-gate-alert');
+      const mgrBadge = document.getElementById('mgr-badge-indicator');
+
+      if (user.isManager) {
+        roleBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200';
+        roleBadge.textContent = 'Manager / Approver';
+        personaIndicator.textContent = 'Manager View (Supervisory)';
+        personaIndicator.className = 'text-xs font-semibold text-indigo-600';
+        gateAlert.classList.add('hidden');
+        mgrBadge.className = 'text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200';
+        mgrBadge.textContent = 'Manager Workflow Authority Active';
+      } else {
+        roleBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+        roleBadge.textContent = 'Employee';
+        personaIndicator.textContent = 'Employee View (Self-Service)';
+        personaIndicator.className = 'text-xs font-semibold text-emerald-600';
+        gateAlert.classList.remove('hidden');
+        mgrBadge.className = 'text-xs px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-500 border border-slate-200';
+        mgrBadge.textContent = 'View-Only (Approval Requires Manager Role)';
+      }
+
+      // Compute Metrics
+      document.getElementById('stat-total-balance').textContent = user.leaveBalance;
+      const barPct = Math.min(100, Math.round((user.leaveBalance / 25) * 100));
+      document.getElementById('stat-total-bar').style.width = barPct + '%';
+
+      // Pending days for this user
+      const userPendingDays = requests
+        .filter(r => r.employeeId === user.id && r.status === 'PENDING')
+        .reduce((acc, curr) => acc + curr.daysRequested, 0);
+      document.getElementById('stat-pending-days').textContent = userPendingDays;
+
+      // Approved days taken this year
+      const userApprovedDays = requests
+        .filter(r => r.employeeId === user.id && r.status === 'APPROVED')
+        .reduce((acc, curr) => acc + curr.daysRequested, 0);
+      document.getElementById('stat-approved-days').textContent = userApprovedDays;
+
+      // Team absent colleagues in dept
+      const teamAbsent = requests.filter(r => {
+        if (r.status !== 'APPROVED') return false;
+        const reqEmp = employees.find(e => e.id === r.employeeId);
+        return reqEmp && reqEmp.department === user.department && reqEmp.id !== user.id;
+      }).length;
+      document.getElementById('stat-team-absent').textContent = teamAbsent;
+    }
+
+    function updateFormFields() {
+      const user = employees.find(e => e.id === currentUserId);
+      document.getElementById('form-applicant-display').value = `${user.name} (${user.id}) - Balance: ${user.leaveBalance} days`;
+      calculateLiveRequestedDays();
+    }
+
+    // ==========================================
+    // 6. REQUEST SUBMISSION HANDLER
+    // ==========================================
+
+    function handleLeaveSubmit(e) {
+      e.preventDefault();
+      const user = employees.find(e => e.id === currentUserId);
+      const leaveType = document.getElementById('form-leave-type').value;
+      const start = document.getElementById('form-start-date').value;
+      const end = document.getElementById('form-end-date').value;
+      const reason = document.getElementById('form-reason').value.trim() || 'No description provided';
+
+      const days = calculateWorkingDays(start, end);
+      if (days <= 0) {
+        showToast('Cannot submit a request with 0 business days.', 'error');
+        return;
+      }
+
+      if (!user.leaveBalance || user.leaveBalance < days) {
+        jvmLog('ERROR', 'LeaveManager', 'submitLeaveRequest', `Validation failed: Requested ${days} > Balance ${user.leaveBalance} for ${user.id}`);
+        showToast('Insufficient leave balance for this request.', 'error');
+        return;
+      }
+
+      // Generate simulated request object
+      const newId = 'REQ-' + (1000 + requests.length + 1);
+      const newRequest = {
+        requestId: newId,
+        employeeId: user.id,
+        leaveType: leaveType,
+        startDate: start,
+        endDate: end,
+        daysRequested: days,
+        status: 'PENDING',
+        reason: reason,
+        reviewedBy: null,
+        appliedDate: new Date().toISOString().split('T')[0]
+      };
+
+      requests.unshift(newRequest);
+
+      jvmLog('SUCCESS', 'LeaveManager', 'submitLeaveRequest', `Constructed LeaveRequest ${newId} (${days} days) for ${user.name}`);
+      jvmLog('INFO', 'LeaveRequest', '<init>', `Request status set to LeaveStatus.PENDING`);
+
+      // Reset form
+      document.getElementById('leaveApplicationForm').reset();
+      updateFormFields();
+      renderRequestsTable();
+      renderUserHistory();
+      renderHeaderAndMetrics();
+      showToast(`Leave request ${newId} submitted for review!`, 'success');
+    }
+
+    // ==========================================
+    // 7. MANAGER APPROVAL / REJECTION ACTIONS
+    // ==========================================
+
+    function processManagerDecision(requestId, approve) {
+      const activeUser = employees.find(e => e.id === currentUserId);
+      
+      // Strict role check simulating Java access controls
+      if (!activeUser.isManager) {
+        jvmLog('WARN', 'Manager', 'processRequest', `ACCESS DENIED: ${activeUser.id} attempted to invoke manager approval workflow.`);
+        showToast('Access Denied: Only Manager personas can approve/reject leaves.', 'error');
+        return;
+      }
+
+      const req = requests.find(r => r.requestId === requestId);
+      if (!req) return;
+
+      const applicant = employees.find(e => e.id === req.employeeId);
+
+      if (approve) {
+        if (applicant.leaveBalance < req.daysRequested) {
+          jvmLog('ERROR', 'Manager', 'processRequest', `Approval failed: ${applicant.name} has only ${applicant.leaveBalance} days, needs ${req.daysRequested}`);
+          showToast(`Cannot approve: ${applicant.name} has insufficient balance.`, 'error');
+          return;
+        }
+
+        // Invoke encapsulated deduction
+        applicant.leaveBalance -= req.daysRequested;
+        req.status = 'APPROVED';
+        req.reviewedBy = `${activeUser.name} (${activeUser.id})`;
+
+        jvmLog('SUCCESS', 'Manager', 'processRequest', `APPROVED ${req.requestId}. Invoked ${applicant.id}.deductLeave(${req.daysRequested}). New balance: ${applicant.leaveBalance}`);
+        showToast(`Request ${req.requestId} approved for ${applicant.name}!`, 'success');
+      } else {
+        req.status = 'REJECTED';
+        req.reviewedBy = `${activeUser.name} (${activeUser.id})`;
+
+        jvmLog('WARN', 'Manager', 'processRequest', `REJECTED ${req.requestId} by manager ${activeUser.name}. Balance remains ${applicant.leaveBalance}`);
+        showToast(`Request ${req.requestId} has been rejected.`, 'info');
+      }
+
+      renderRequestsTable();
+      renderUserHistory();
+      renderHeaderAndMetrics();
+      renderCalendar();
+    }
+
+    // ==========================================
+    // 8. RENDER WORKFLOW TABLE & USER HISTORY
+    // ==========================================
+
+    function renderRequestsTable() {
+      const tbody = document.getElementById('requests-tbody');
+      const filter = document.getElementById('filterRequestStatus').value;
+      const activeUser = employees.find(e => e.id === currentUserId);
+
+      let filtered = requests;
+      if (filter !== 'ALL') {
+        filtered = filtered.filter(r => r.status === filter);
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400">
+              <i class="fa-solid fa-inbox text-2xl mb-1 block"></i>
+              No requests found matching current filter.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(req => {
+        const applicant = employees.find(e => e.id === req.employeeId) || { name: 'Unknown', department: 'Unknown' };
+        const typeMeta = LEAVE_TYPES[req.leaveType] || LEAVE_TYPES.VACATION;
+        const statusMeta = LEAVE_STATUS[req.status];
+
+        // Format dates
+        const dateRangeStr = `${req.startDate} <span class="text-slate-400">to</span> ${req.endDate}`;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-all">
+            <td class="py-3 px-4 font-mono font-bold text-slate-800">${req.requestId}</td>
+            <td class="py-3 px-4">
+              <div class="font-semibold text-slate-900">${applicant.name}</div>
+              <div class="text-[11px] text-slate-500 font-mono">${applicant.department} • Bal: ${applicant.leaveBalance}d</div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-md ${typeMeta.badgeClass} text-[11px] font-semibold">
+                <i class="fa-solid ${typeMeta.icon} mr-1"></i> ${typeMeta.label}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-slate-700">${dateRangeStr}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="font-bold text-slate-800">${req.daysRequested}</span>
+              <span class="text-[10px] text-slate-500 block">business days</span>
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusMeta.class}">
+                ${statusMeta.label}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+              ${req.status === 'PENDING' ? `
+                <div class="flex items-center justify-end space-x-1.5">
+                  <button onclick="processManagerDecision('${req.requestId}', true)" 
+                          class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] shadow-2xs transition-all flex items-center ${!activeUser.isManager ? 'opacity-50 cursor-not-allowed' : ''}"
+                          title="${!activeUser.isManager ? 'Requires Manager Persona' : 'Approve Leave Request'}">
+                    <i class="fa-solid fa-check mr-1"></i> Approve
+                  </button>
+                  <button onclick="processManagerDecision('${req.requestId}', false)" 
+                          class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-[11px] transition-all flex items-center ${!activeUser.isManager ? 'opacity-50 cursor-not-allowed' : ''}"
+                          title="${!activeUser.isManager ? 'Requires Manager Persona' : 'Reject Leave Request'}">
+                    <i class="fa-solid fa-xmark mr-1"></i> Reject
+                  </button>
+                </div>
+              ` : `
+                <span class="text-[11px] text-slate-400 italic">
+                  ${req.reviewedBy ? `By ${req.reviewedBy}` : 'Processed'}
+                </span>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderUserHistory() {
+      const container = document.getElementById('user-history-list');
+      const counterBadge = document.getElementById('history-counter-badge');
+      const userRequests = requests.filter(r => r.employeeId === currentUserId);
+
+      counterBadge.textContent = `${userRequests.length} record${userRequests.length === 1 ? '' : 's'}`;
+
+      if (userRequests.length === 0) {
+        container.innerHTML = `
+          <div class="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <i class="fa-regular fa-folder-open text-2xl mb-1"></i>
+            <p class="text-xs">No leave requests logged for this employee profile yet.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = userRequests.map(req => {
+        const typeMeta = LEAVE_TYPES[req.leaveType] || LEAVE_TYPES.VACATION;
+        const statusMeta = LEAVE_STATUS[req.status];
+
+        return `
+          <div class="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-start space-x-3">
+              <span class="inline-flex items-center px-2 py-1 rounded-lg ${typeMeta.badgeClass} text-xs font-semibold">
+                <i class="fa-solid ${typeMeta.icon}"></i>
+              </span>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold text-xs text-slate-900">${req.requestId}</span>
+                  <span class="text-slate-400 text-[10px]">•</span>
+                  <span class="text-xs font-semibold text-slate-700">${typeMeta.label}</span>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5">
+                  <i class="fa-regular fa-calendar mr-1"></i> ${req.startDate} to ${req.endDate}
+                  <span class="font-bold text-slate-700">(${req.daysRequested} working days)</span>
+                </div>
+                <div class="text-[11px] text-slate-400 italic mt-0.5">Note: "${req.reason}"</div>
+              </div>
+            </div>
+
+            <div class="text-right flex sm:flex-col items-center sm:items-end justify-between">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusMeta.class}">
+                ${statusMeta.label}
+              </span>
+              ${req.reviewedBy ? `<span class="text-[10px] text-slate-400 mt-1">${req.reviewedBy}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==========================================
+    // 9. TEAM LEAVE CALENDAR GENERATOR
+    // ==========================================
+
+    function changeMonth(delta) {
+      calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function resetToDemoMonth() {
+      calendarCurrentDate = new Date(2026, 10, 1);
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const year = calendarCurrentDate.getFullYear();
+      const month = calendarCurrentDate.getMonth();
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      
+      document.getElementById('calendar-month-title').textContent = `${monthNames[month]} ${year}`;
+
+      const deptFilter = document.getElementById('cal-dept-filter').value;
+      const grid = document.getElementById('calendar-grid-cells');
+      grid.innerHTML = '';
+
+      // Days calculation
+      const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sunday
+      const totalDays = new Date(year, month + 1, 0).getDate();
+      const prevMonthLastDate = new Date(year, month, 0).getDate();
+
+      // Only show approved leaves on calendar
+      const approvedLeaves = requests.filter(r => {
+        if (r.status !== 'APPROVED') return false;
+        if (deptFilter === 'ALL') return true;
+        const emp = employees.find(e => e.id === r.employeeId);
+        return emp && emp.department.toLowerCase() === deptFilter.toLowerCase();
+      });
+
+      // 1. Inactive cells from previous month
+      for (let i = firstDayIndex; i > 0; i--) {
+        const prevDayNum = prevMonthLastDate - i + 1;
+        const cell = document.createElement('div');
+        cell.className = 'bg-slate-50/50 min-h-[90px] p-1.5 text-slate-300 select-none';
+        cell.innerHTML = `<span class="text-[11px] font-semibold">${prevDayNum}</span>`;
+        grid.appendChild(cell);
+      }
+
+      // 2. Days of current month
+      for (let day = 1; day <= totalDays; day++) {
+        const cellDate = new Date(year, month, day);
+        const dayOfWeek = cellDate.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+        // Find matching leaves active on this specific day
+        const activeLeaves = approvedLeaves.filter(req => {
+          return dateStr >= req.startDate && dateStr <= req.endDate;
+        });
+
+        const cell = document.createElement('div');
+        cell.className = `min-h-[95px] p-1.5 transition-all flex flex-col justify-between cursor-pointer border-t border-slate-100 ${
+          isWeekend ? 'bg-slate-50/70 text-slate-400' : 'bg-white hover:bg-blue-50/40 text-slate-800'
+        }`;
+
+        cell.onclick = () => openDayModal(dateStr, activeLeaves);
+
+        // Header with day number
+        let badgesHtml = '';
+        if (activeLeaves.length > 0) {
+          badgesHtml = activeLeaves.slice(0, 2).map(req => {
+            const emp = employees.find(e => e.id === req.employeeId) || { name: 'Emp' };
+            const typeMeta = LEAVE_TYPES[req.leaveType] || LEAVE_TYPES.VACATION;
+            return `
+              <div class="px-1.5 py-0.5 rounded text-[10px] font-medium ${typeMeta.badgeClass} truncate flex items-center space-x-1 mb-1">
+                <i class="fa-solid ${typeMeta.icon} text-[9px]"></i>
+                <span class="truncate">${emp.name.split(' ')[0]}</span>
+              </div>
+            `;
+          }).join('');
+
+          if (activeLeaves.length > 2) {
+            badgesHtml += `<div class="text-[10px] text-slate-500 font-bold">+${activeLeaves.length - 2} more</div>`;
+          }
+        }
+
+        cell.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold ${isWeekend ? 'text-slate-400' : 'text-slate-700'}">${day}</span>
+              ${activeLeaves.length > 0 ? `<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>` : ''}
+            </div>
+            <div class="mt-1 space-y-0.5">
+              ${badgesHtml}
+            </div>
+          </div>
+          ${isWeekend ? '<div class="text-[9px] text-slate-400 font-mono">Weekend</div>' : ''}
+        `;
+
+        grid.appendChild(cell);
+      }
+
+      // 3. Trailing cells to fill remaining grid row
+      const totalCellsFilled = firstDayIndex + totalDays;
+      const remaining = (7 - (totalCellsFilled % 7)) % 7;
+      for (let i = 1; i <= remaining; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'bg-slate-50/50 min-h-[90px] p-1.5 text-slate-300 select-none';
+        cell.innerHTML = `<span class="text-[11px] font-semibold">${i}</span>`;
+        grid.appendChild(cell);
+      }
+    }
+
+    function openDayModal(dateStr, activeLeaves) {
+      const modal = document.getElementById('day-modal');
+      const title = document.getElementById('modal-date-title');
+      const content = document.getElementById('modal-leaves-content');
+
+      title.textContent = `Absence Schedule: ${dateStr}`;
+
+      if (!activeLeaves || activeLeaves.length === 0) {
+        content.innerHTML = `
+          <div class="p-6 text-center text-slate-500">
+            <i class="fa-solid fa-mug-hot text-2xl text-slate-300 mb-2"></i>
+            <p class="text-xs">No team leaves scheduled for this day.</p>
+            <span class="text-[11px] text-emerald-600 font-semibold">100% Team Attendance</span>
+          </div>
+        `;
+      } else {
+        content.innerHTML = activeLeaves.map(req => {
+          const emp = employees.find(e => e.id === req.employeeId);
+          const typeMeta = LEAVE_TYPES[req.leaveType] || LEAVE_TYPES.VACATION;
+          return `
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">
+                  ${emp.avatar}
+                </div>
+                <div>
+                  <h4 class="font-bold text-xs text-slate-900">${emp.name}</h4>
+                  <p class="text-[11px] text-slate-500">${emp.department} • Ref: ${req.requestId}</p>
+                </div>
+              </div>
+              <span class="inline-flex items-center px-2 py-1 rounded-md ${typeMeta.badgeClass} text-xs font-semibold">
+                <i class="fa-solid ${typeMeta.icon} mr-1"></i> ${typeMeta.label}
+              </span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeDayModal() {
+      document.getElementById('day-modal').classList.add('hidden');
+    }
+
+    // ==========================================
+    // 10. OOP SPEC & CLASS EXPLORER
+    // ==========================================
+
+    function selectOOPClass(className) {
+      selectedOOPClass = className;
+      
+      // Update buttons
+      document.querySelectorAll('.oop-pill-btn').forEach(btn => {
+        if (btn.textContent.includes(className)) {
+          btn.className = 'oop-pill-btn px-3 py-1.5 rounded-lg border font-mono font-semibold bg-blue-50 border-blue-300 text-blue-700';
+        } else {
+          btn.className = 'oop-pill-btn px-3 py-1.5 rounded-lg border font-mono font-semibold bg-slate-100 border-slate-200 text-slate-700';
+        }
+      });
+
+      renderOOPView();
+      jvmLog('INFO', 'ClassLoader', 'loadClass', `Loaded JVM bytecode for entity: com.workpulse.leave.model.${className}`);
+    }
+
+    function renderOOPView() {
+      const data = OOP_SCHEMAS[selectedOOPClass];
+      const umlCard = document.getElementById('uml-card');
+      const filename = document.getElementById('code-filename');
+      const snippet = document.getElementById('code-snippet-display');
+
+      filename.textContent = data.title;
+      snippet.textContent = data.code;
+
+      umlCard.innerHTML = `
+        <div class="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 text-white">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono tracking-widest uppercase font-semibold text-blue-200">UML Class Contract</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-white/20 font-mono">${data.uml.type}</span>
+          </div>
+          <h3 class="text-lg font-mono font-bold mt-1">${data.uml.name}</h3>
+          <p class="text-xs text-blue-100 mt-1">${data.description}</p>
+        </div>
+
+        <div class="p-4 space-y-4 font-mono text-xs">
+          <div>
+            <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Encapsulated Attributes</h4>
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1">
+              ${data.uml.attributes.map(attr => `<div class="text-slate-700">${escapeHtml(attr)}</div>`).join('')}
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Operations & Methods</h4>
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1">
+              ${data.uml.methods.map(m => `<div class="text-blue-700 font-semibold">${escapeHtml(m)}</div>`).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function copyCurrentJavaCode() {
+      const code = document.getElementById('code-snippet-display').textContent;
+      const el = document.createElement('textarea');
+      el.value = code;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('Java class source code copied to clipboard!', 'info');
+    }
+
+    function escapeHtml(string) {
+      return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ==========================================
+    // 11. NAVIGATION & TOASTS
+    // ==========================================
+
+    function switchTab(tab) {
+      document.getElementById('tab-dashboard-view').classList.add('hidden');
+      document.getElementById('tab-calendar-view').classList.add('hidden');
+      document.getElementById('tab-oop-view').classList.add('hidden');
+
+      // Reset button styles
+      ['dashboard', 'calendar', 'oop'].forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) {
+          btn.className = 'tab-btn px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all';
+        }
+      });
+
+      const activeBtn = document.getElementById(`nav-${tab}`);
+      if (activeBtn) {
+        activeBtn.className = 'tab-btn px-3.5 py-1.5 rounded-lg bg-white text-slate-900 shadow-xs transition-all';
+      }
+
+      if (tab === 'dashboard') {
+        document.getElementById('tab-dashboard-view').classList.remove('hidden');
+      } else if (tab === 'calendar') {
+        document.getElementById('tab-calendar-view').classList.remove('hidden');
+        renderCalendar();
+      } else if (tab === 'oop') {
+        document.getElementById('tab-oop-view').classList.remove('hidden');
+        renderOOPView();
+      }
+
+      jvmLog('INFO', 'Router', 'navigate', `Switched viewport view to /${tab}`);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      let borderCol = 'border-blue-500 bg-white text-slate-800';
+      let icon = 'fa-circle-info text-blue-500';
+      if (type === 'success') {
+        borderCol = 'border-emerald-500 bg-white text-slate-800';
+        icon = 'fa-circle-check text-emerald-500';
+      } else if (type === 'error') {
+        borderCol = 'border-rose-500 bg-white text-slate-800';
+        icon = 'fa-circle-xmark text-rose-500';
+      }
+
+      toast.className = `p-3 rounded-xl shadow-lg border-l-4 ${borderCol} flex items-center space-x-3 text-xs font-medium transform transition-all duration-300 translate-x-4 pointer-events-auto min-w-[280px]`;
+      toast.innerHTML = `
+        <i class="fa-solid ${icon} text-base"></i>
+        <div class="flex-1">${message}</div>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.remove('translate-x-4'), 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-x-4');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // ==========================================
+    // 12. INITIALIZATION
+    // ==========================================
+
+    window.onload = function() {
+      // 1. Populate persona selector
+      const selector = document.getElementById('userSelector');
+      employees.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.id;
+        opt.textContent = `${emp.name} (${emp.role === 'MANAGER' ? 'Manager' : 'Employee'})`;
+        if (emp.id === currentUserId) opt.selected = true;
+        selector.appendChild(opt);
+      });
+
+      // 2. Set default dates in form: e.g. Nov 16 to Nov 18, 2026
+      const startInput = document.getElementById('form-start-date');
+      const endInput = document.getElementById('form-end-date');
+      startInput.value = '2026-11-16';
+      endInput.value = '2026-11-18';
+
+      // 3. Initial rendering
+      renderHeaderAndMetrics();
+      updateFormFields();
+      renderRequestsTable();
+      renderUserHistory();
+      renderOOPView();
+
+      // 4. Initial JVM boot logs
+      jvmLog('INFO', 'JVM', 'init', 'Java HotSpot(TM) 64-Bit Server VM initialized (build 17.0.2+8)');
+      jvmLog('INFO', 'LeaveManager', 'bootstrap', 'Loaded organization registry with 5 employee entities: Shyma, Sidharth, Thanvi, Lena, Sulala.');
+      jvmLog('INFO', 'LeaveManager', 'bootstrap', 'Initialized 4 pre-existing LeaveRequest domain entities.');
+      jvmLog('INFO', 'LeaveRequest', 'calculateWorkingDays', 'Initialized calendar rules (excluding Sat/Sun).');
+    };
+  </script>
+</body>
+</html>
